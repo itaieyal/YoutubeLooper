@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LoopMaster Pro v5</title>
+    <title>LoopMaster Pro v4</title>
     <style>
         :root {
             --primary: #6366f1;
@@ -13,7 +13,6 @@
             --text: #f1f5f9;
             --accent: #10b981; /* Green */
             --danger: #ef4444; /* Red */
-            --warning: #f59e0b; /* Amber */
         }
 
         * { box-sizing: border-box; }
@@ -42,33 +41,21 @@
             padding: 20px;
             border-bottom: 1px solid #334155;
             background: rgba(0,0,0,0.2);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
         }
 
-        .sidebar-header h2 { margin: 0; font-size: 1.2rem; }
+        .sidebar-header h2 { margin: 0 0 10px 0; font-size: 1.2rem; }
 
-        .sidebar-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .btn-sidebar {
-            padding: 8px;
+        .btn-add-song {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary);
+            color: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.85rem;
-            color: white;
-            transition: opacity 0.2s;
         }
-        .btn-sidebar:hover { opacity: 0.9; }
-
-        .btn-add { background: var(--primary); }
-        .btn-import { background: #475569; }
+        .btn-add-song:hover { opacity: 0.9; }
 
         .song-list {
             flex-grow: 1;
@@ -111,34 +98,6 @@
             gap: 20px;
         }
 
-        /* Song Header (New) */
-        .song-header {
-            max-width: 900px;
-            margin: 0 auto;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #334155;
-        }
-
-        .song-title { font-size: 1.5rem; font-weight: bold; margin: 0; }
-        
-        .btn-export {
-            background: transparent;
-            border: 1px solid var(--warning);
-            color: var(--warning);
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .btn-export:hover { background: var(--warning); color: #000; }
-
         .video-container {
             width: 100%;
             max-width: 900px;
@@ -179,7 +138,10 @@
         }
 
         .big-play-btn:active { transform: scale(0.98); }
-        .big-play-btn.stop-mode { background-color: var(--danger); }
+        
+        .big-play-btn.stop-mode {
+            background-color: var(--danger);
+        }
 
         .loop-config {
             background: var(--surface);
@@ -256,6 +218,7 @@
             background: rgba(16, 185, 129, 0.1);
         }
 
+        /* KEYBOARD SHORTCUT BADGE */
         .shortcut-badge {
             display: inline-flex;
             align-items: center;
@@ -294,15 +257,10 @@
 </head>
 <body>
 
-    <input type="file" id="importInput" accept=".json" style="display: none;" onchange="handleFileImport(this)">
-
     <aside class="sidebar">
         <div class="sidebar-header">
             <h2>LoopMaster Pro</h2>
-            <div class="sidebar-actions">
-                <button class="btn-sidebar btn-add" onclick="promptAddSong()">+ New</button>
-                <button class="btn-sidebar btn-import" onclick="triggerImport()">↑ Import</button>
-            </div>
+            <button class="btn-add-song" onclick="promptAddSong()">+ Add New Song</button>
         </div>
         <ul id="songListElement" class="song-list"></ul>
     </aside>
@@ -316,11 +274,6 @@
 
         <div id="playerArea" style="display:none; width: 100%; display: flex; flex-direction: column; gap: 20px;">
             
-            <div class="song-header">
-                <h1 id="currentSongTitle" class="song-title">Song Title</h1>
-                <button class="btn-export" onclick="exportCurrentSong()">↓ Export JSON</button>
-            </div>
-
             <div class="video-container">
                 <div id="yt-player"></div>
             </div>
@@ -359,7 +312,7 @@
 
     <script>
         // --- 1. STATE & STORAGE ---
-        const STORAGE_KEY = 'loopMaster_v5';
+        const STORAGE_KEY = 'loopMaster_v4'; // Updated key
         let library = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         
         let activeSongId = null;
@@ -368,78 +321,16 @@
         let player; 
         let loopInterval;
         let isPlayingLoop = false;
-        let tempStart = 0; let tempEnd = null;
+
+        let tempStart = 0;
+        let tempEnd = null;
 
         function saveLibrary() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
             renderSidebar();
         }
 
-        // --- 2. IMPORT / EXPORT LOGIC (NEW) ---
-
-        function exportCurrentSong() {
-            const song = library.find(s => s.id === activeSongId);
-            if (!song) return;
-
-            // Create a clean copy without internal IDs if you prefer, 
-            // but keeping them is fine as we regenerate on import anyway.
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(song, null, 2));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", `${song.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`);
-            document.body.appendChild(downloadAnchorNode); // required for firefox
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
-        }
-
-        function triggerImport() {
-            document.getElementById('importInput').click();
-        }
-
-        function handleFileImport(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedSong = JSON.parse(e.target.result);
-                    
-                    // Basic Validation
-                    if (!importedSong.videoId || !Array.isArray(importedSong.loops)) {
-                        alert("Invalid file format: Missing videoId or loops.");
-                        return;
-                    }
-
-                    // Generate Fresh IDs to avoid conflicts
-                    const newSongId = Date.now().toString();
-                    const newSong = {
-                        id: newSongId,
-                        title: importedSong.title + " (Imported)",
-                        videoId: importedSong.videoId,
-                        loops: importedSong.loops.map((l, index) => ({
-                            id: newSongId + "_loop_" + index, // unique ID
-                            name: l.name,
-                            start: l.start,
-                            end: l.end
-                        }))
-                    };
-
-                    library.push(newSong);
-                    saveLibrary();
-                    loadSong(newSong.id); // Switch to new song
-                    alert("Song imported successfully!");
-
-                } catch (err) {
-                    console.error(err);
-                    alert("Error parsing JSON file.");
-                }
-            };
-            reader.readAsText(file);
-            input.value = ''; // Reset input so same file can be selected again
-        }
-
-        // --- 3. YOUTUBE API ---
+        // --- 2. YOUTUBE API ---
         var tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
         var firstScriptTag = document.getElementsByTagName('script')[0];
@@ -454,21 +345,37 @@
             });
         }
 
-        // --- 4. KEYBOARD SHORTCUTS ---
+        // --- 3. KEYBOARD SHORTCUTS (NEW) ---
         document.addEventListener('keydown', (e) => {
+            // 1. Ignore if typing in an input field (so you can rename loops safely)
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            // 2. Ignore if no song is loaded
             if (!activeSongId) return;
+
+            // 3. Parse key
             const key = parseInt(e.key);
+
+            // 4. Trigger if key is 1-9
             if (!isNaN(key) && key >= 1 && key <= 9) {
                 const song = library.find(s => s.id === activeSongId);
+                // Adjust for 0-based array index (Key 1 -> Index 0)
                 const loopIndex = key - 1;
-                if (song && song.loops[loopIndex]) selectAndPlayLoop(song.loops[loopIndex].id);
+                
+                if (song && song.loops[loopIndex]) {
+                    selectAndPlayLoop(song.loops[loopIndex].id);
+                }
+                // If loop doesn't exist, do nothing (silent fail)
             }
         });
 
-        // --- 5. CORE PLAYBACK ---
+        // --- 4. CORE LOGIC ---
+
         function toggleGlobalPlay() {
-            if (!activeLoopId) { alert("Please select a saved loop first."); return; }
+            if (!activeLoopId) {
+                alert("Please select a saved loop from the list below first.");
+                return;
+            }
             if (isPlayingLoop) stopPlayback();
             else startPlayback(activeLoopId);
         }
@@ -485,8 +392,9 @@
 
             isPlayingLoop = true;
             activeLoopId = loopId; 
+
             updateBigButtonState(true);
-            renderLoops(song); 
+            renderLoops(song); // Updates highlights
 
             player.seekTo(loop.start, true);
             player.playVideo();
@@ -506,6 +414,7 @@
             if (!player || typeof player.getCurrentTime !== 'function') return;
             const current = player.getCurrentTime();
             const shouldLoop = document.getElementById('loopCheckbox').checked;
+
             if (current >= loop.end) {
                 if (shouldLoop) player.seekTo(loop.start, true);
                 else stopPlayback();
@@ -523,7 +432,8 @@
             }
         }
 
-        // --- 6. DATA CRUD ---
+        // --- 5. DATA & CRUD ---
+
         function promptAddSong() {
             const url = prompt("Paste YouTube URL:");
             if (!url) return;
@@ -559,13 +469,11 @@
             const song = library.find(s => s.id === id);
             if (!song) return;
             renderSidebar();
-            
             document.getElementById('noSongSelected').style.display = 'none';
             document.getElementById('playerArea').style.display = 'flex';
-            document.getElementById('currentSongTitle').innerText = song.title;
-
             if (player && typeof player.loadVideoById === 'function') player.loadVideoById(song.videoId);
             
+            // Reset state
             stopPlayback();
             activeLoopId = null;
             tempStart = 0; tempEnd = null;
@@ -574,10 +482,13 @@
         }
 
         function saveCurrentLoop() {
-            if (tempEnd === null || tempStart >= tempEnd) { alert("Please set valid Start and End times."); return; }
+            if (tempEnd === null || tempStart >= tempEnd) {
+                alert("Please set valid Start and End times.");
+                return;
+            }
             const song = library.find(s => s.id === activeSongId);
             song.loops.push({
-                id: Date.now().toString() + "_loop",
+                id: Date.now().toString(),
                 name: `Loop ${song.loops.length + 1}`,
                 start: tempStart,
                 end: tempEnd
@@ -602,8 +513,16 @@
             if(loop) { loop.name = newName; saveLibrary(); }
         }
 
-        function captureStart() { if (!player) return; tempStart = player.getCurrentTime(); updateEditorDisplay(); }
-        function captureEnd() { if (!player) return; tempEnd = player.getCurrentTime(); updateEditorDisplay(); }
+        function captureStart() {
+            if (!player) return;
+            tempStart = player.getCurrentTime();
+            updateEditorDisplay();
+        }
+        function captureEnd() {
+            if (!player) return;
+            tempEnd = player.getCurrentTime();
+            updateEditorDisplay();
+        }
         function updateEditorDisplay() {
             document.getElementById('displayStart').innerText = tempStart.toFixed(2);
             document.getElementById('displayEnd').innerText = tempEnd ? tempEnd.toFixed(2) : "--";
@@ -613,7 +532,8 @@
             return (match && match[2].length === 11) ? match[2] : null;
         }
 
-        // --- 7. RENDER ---
+        // --- 6. RENDERERS ---
+
         function renderSidebar() {
             const list = document.getElementById('songListElement');
             list.innerHTML = '';
@@ -633,15 +553,17 @@
                 container.innerHTML = '<div style="color:#64748b; text-align:center;">No loops saved yet.</div>';
                 return;
             }
+            
             song.loops.forEach((loop, index) => {
                 const isSelected = (loop.id === activeLoopId);
                 const div = document.createElement('div');
                 div.className = `loop-card ${isSelected ? 'selected' : ''}`;
                 div.onclick = () => selectAndPlayLoop(loop.id);
 
+                // Determine Shortcut Badge
                 const shortcutHTML = index < 9 
                     ? `<span class="shortcut-badge">${index + 1}</span>` 
-                    : `<span class="shortcut-badge" style="opacity:0"></span>`;
+                    : `<span class="shortcut-badge" style="opacity:0"></span>`; // Placeholder for alignment
 
                 div.innerHTML = `
                     ${shortcutHTML}
