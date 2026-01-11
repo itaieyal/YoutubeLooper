@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LoopMaster Pro v5</title>
+    <title>LoopMaster Pro v6</title>
     <style>
         :root {
             --primary: #6366f1;
@@ -111,7 +111,6 @@
             gap: 20px;
         }
 
-        /* Song Header (New) */
         .song-header {
             max-width: 900px;
             margin: 0 auto;
@@ -157,8 +156,8 @@
             max-width: 900px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 20px;
+            grid-template-columns: 1fr auto auto; /* Play | Speed | Loop */
+            gap: 15px;
             align-items: center;
         }
 
@@ -181,13 +180,16 @@
         .big-play-btn:active { transform: scale(0.98); }
         .big-play-btn.stop-mode { background-color: var(--danger); }
 
-        .loop-config {
+        .control-group {
             background: var(--surface);
             padding: 10px 20px;
             border-radius: 10px;
             display: flex;
             align-items: center;
+            gap: 10px;
             height: 100%;
+            color: #94a3b8;
+            font-weight: 500;
         }
 
         .checkbox-wrapper {
@@ -196,8 +198,19 @@
             gap: 10px;
             cursor: pointer;
             user-select: none;
+            color: white;
         }
         input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); }
+
+        select.speed-select {
+            background: #334155;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
 
         /* --- EDITOR & LIBRARY --- */
         .editor-panel {
@@ -329,10 +342,23 @@
                 <button id="mainPlayBtn" class="big-play-btn" onclick="toggleGlobalPlay()">
                     ▶ Play Selected Loop
                 </button>
-                <div class="loop-config">
+
+                <div class="control-group">
+                    <label>Speed</label>
+                    <select id="speedSelect" class="speed-select" onchange="updateSpeed(this.value)">
+                        <option value="0.25">0.25x</option>
+                        <option value="0.5">0.50x</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1" selected>1.0x</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.50x</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
                     <label class="checkbox-wrapper">
                         <input type="checkbox" id="loopCheckbox" checked>
-                        <span>Loop Enabled</span>
+                        <span>Loop</span>
                     </label>
                 </div>
             </div>
@@ -359,7 +385,7 @@
 
     <script>
         // --- 1. STATE & STORAGE ---
-        const STORAGE_KEY = 'loopMaster_v5';
+        const STORAGE_KEY = 'loopMaster_v6';
         let library = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         
         let activeSongId = null;
@@ -369,77 +395,16 @@
         let loopInterval;
         let isPlayingLoop = false;
         let tempStart = 0; let tempEnd = null;
+        
+        // NEW: Speed State
+        let currentSpeed = 1.0;
 
         function saveLibrary() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
             renderSidebar();
         }
 
-        // --- 2. IMPORT / EXPORT LOGIC (NEW) ---
-
-        function exportCurrentSong() {
-            const song = library.find(s => s.id === activeSongId);
-            if (!song) return;
-
-            // Create a clean copy without internal IDs if you prefer, 
-            // but keeping them is fine as we regenerate on import anyway.
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(song, null, 2));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", `${song.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`);
-            document.body.appendChild(downloadAnchorNode); // required for firefox
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
-        }
-
-        function triggerImport() {
-            document.getElementById('importInput').click();
-        }
-
-        function handleFileImport(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedSong = JSON.parse(e.target.result);
-                    
-                    // Basic Validation
-                    if (!importedSong.videoId || !Array.isArray(importedSong.loops)) {
-                        alert("Invalid file format: Missing videoId or loops.");
-                        return;
-                    }
-
-                    // Generate Fresh IDs to avoid conflicts
-                    const newSongId = Date.now().toString();
-                    const newSong = {
-                        id: newSongId,
-                        title: importedSong.title + " (Imported)",
-                        videoId: importedSong.videoId,
-                        loops: importedSong.loops.map((l, index) => ({
-                            id: newSongId + "_loop_" + index, // unique ID
-                            name: l.name,
-                            start: l.start,
-                            end: l.end
-                        }))
-                    };
-
-                    library.push(newSong);
-                    saveLibrary();
-                    loadSong(newSong.id); // Switch to new song
-                    alert("Song imported successfully!");
-
-                } catch (err) {
-                    console.error(err);
-                    alert("Error parsing JSON file.");
-                }
-            };
-            reader.readAsText(file);
-            input.value = ''; // Reset input so same file can be selected again
-        }
-
-        // --- 3. YOUTUBE API ---
+        // --- 2. YOUTUBE API ---
         var tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
         var firstScriptTag = document.getElementsByTagName('script')[0];
@@ -450,8 +415,79 @@
                 height: '100%',
                 width: '100%',
                 videoId: '', 
-                events: { 'onReady': () => { if(activeSongId) loadSong(activeSongId); } }
+                playerVars: { 'playsinline': 1, 'rel': 0 },
+                events: { 
+                    'onReady': () => { if(activeSongId) loadSong(activeSongId); },
+                    'onStateChange': onPlayerStateChange // SPEED LISTENER
+                }
             });
+        }
+
+        // NEW: The Speed Enforcer
+        function onPlayerStateChange(event) {
+            // When video starts playing (State == 1)
+            if (event.data == YT.PlayerState.PLAYING) {
+                // Wait 200ms to allow YouTube's internal reset to finish, then apply ours
+                setTimeout(() => {
+                    if(player && player.setPlaybackRate) {
+                        player.setPlaybackRate(currentSpeed);
+                    }
+                }, 200);
+            }
+        }
+
+        function updateSpeed(val) {
+            currentSpeed = parseFloat(val);
+            if(player && player.setPlaybackRate) {
+                player.setPlaybackRate(currentSpeed);
+            }
+        }
+
+        // --- 3. IMPORT / EXPORT ---
+        function exportCurrentSong() {
+            const song = library.find(s => s.id === activeSongId);
+            if (!song) return;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(song, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `${song.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        function triggerImport() { document.getElementById('importInput').click(); }
+
+        function handleFileImport(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedSong = JSON.parse(e.target.result);
+                    if (!importedSong.videoId || !Array.isArray(importedSong.loops)) {
+                        alert("Invalid file format."); return;
+                    }
+                    const newSongId = Date.now().toString();
+                    const newSong = {
+                        id: newSongId,
+                        title: importedSong.title + " (Imported)",
+                        videoId: importedSong.videoId,
+                        loops: importedSong.loops.map((l, index) => ({
+                            id: newSongId + "_loop_" + index,
+                            name: l.name,
+                            start: l.start,
+                            end: l.end
+                        }))
+                    };
+                    library.push(newSong);
+                    saveLibrary();
+                    loadSong(newSong.id);
+                    alert("Song imported successfully!");
+                } catch (err) { alert("Error parsing JSON file."); }
+            };
+            reader.readAsText(file);
+            input.value = '';
         }
 
         // --- 4. KEYBOARD SHORTCUTS ---
@@ -466,7 +502,7 @@
             }
         });
 
-        // --- 5. CORE PLAYBACK ---
+        // --- 5. PLAYBACK LOGIC ---
         function toggleGlobalPlay() {
             if (!activeLoopId) { alert("Please select a saved loop first."); return; }
             if (isPlayingLoop) stopPlayback();
@@ -490,6 +526,7 @@
 
             player.seekTo(loop.start, true);
             player.playVideo();
+            // Speed will be handled by onPlayerStateChange
 
             clearInterval(loopInterval);
             loopInterval = setInterval(() => monitorLoop(loop), 100);
@@ -507,8 +544,13 @@
             const current = player.getCurrentTime();
             const shouldLoop = document.getElementById('loopCheckbox').checked;
             if (current >= loop.end) {
-                if (shouldLoop) player.seekTo(loop.start, true);
-                else stopPlayback();
+                if (shouldLoop) {
+                    player.seekTo(loop.start, true);
+                    // Force speed again immediately after seek command to be safe
+                    player.setPlaybackRate(currentSpeed);
+                } else {
+                    stopPlayback();
+                }
             }
         }
 
@@ -523,7 +565,7 @@
             }
         }
 
-        // --- 6. DATA CRUD ---
+        // --- 6. CRUD ---
         function promptAddSong() {
             const url = prompt("Paste YouTube URL:");
             if (!url) return;
