@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LoopMaster Pro v6</title>
+    <title>LoopMaster Pro Mobile</title>
     <style>
         :root {
             --primary: #6366f1;
@@ -28,7 +28,7 @@
             overflow: hidden;
         }
 
-        /* --- SIDEBAR --- */
+        /* --- SIDEBAR (Desktop Default) --- */
         .sidebar {
             width: 280px;
             background: var(--surface);
@@ -36,6 +36,8 @@
             flex-direction: column;
             border-right: 1px solid #334155;
             flex-shrink: 0;
+            transition: transform 0.3s ease;
+            z-index: 50;
         }
 
         .sidebar-header {
@@ -56,12 +58,12 @@
         }
 
         .btn-sidebar {
-            padding: 8px;
+            padding: 12px; /* Larger touch target */
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: white;
             transition: opacity 0.2s;
         }
@@ -79,7 +81,7 @@
         }
 
         .song-item {
-            padding: 12px;
+            padding: 15px; /* Larger touch target */
             margin-bottom: 5px;
             border-radius: 6px;
             cursor: pointer;
@@ -87,6 +89,7 @@
             justify-content: space-between;
             align-items: center;
             transition: background 0.2s;
+            font-size: 1rem;
         }
 
         .song-item:hover { background: var(--surface-hover); }
@@ -97,7 +100,8 @@
             border: none;
             color: rgba(255,255,255,0.4);
             cursor: pointer;
-            padding: 4px;
+            padding: 8px; /* Larger touch target */
+            font-size: 1.2rem;
         }
         .btn-delete-song:hover { color: var(--text); }
 
@@ -109,8 +113,28 @@
             overflow-y: auto;
             padding: 20px;
             gap: 20px;
+            position: relative;
         }
 
+        /* Mobile Menu Toggle (Hidden on Desktop) */
+        .mobile-header-bar {
+            display: none; /* Hidden by default */
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .btn-mobile-menu {
+            background: var(--surface);
+            color: white;
+            border: 1px solid #334155;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        /* Song Header */
         .song-header {
             max-width: 900px;
             margin: 0 auto;
@@ -120,15 +144,17 @@
             align-items: center;
             padding-bottom: 10px;
             border-bottom: 1px solid #334155;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
-        .song-title { font-size: 1.5rem; font-weight: bold; margin: 0; }
+        .song-title { font-size: 1.5rem; font-weight: bold; margin: 0; word-break: break-word; }
         
         .btn-export {
             background: transparent;
             border: 1px solid var(--warning);
             color: var(--warning);
-            padding: 6px 12px;
+            padding: 8px 12px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.9rem;
@@ -136,7 +162,6 @@
             align-items: center;
             gap: 5px;
         }
-        .btn-export:hover { background: var(--warning); color: #000; }
 
         .video-container {
             width: 100%;
@@ -156,15 +181,15 @@
             max-width: 900px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 1fr auto auto; /* Play | Speed | Loop */
+            grid-template-columns: 1fr auto auto; /* Desktop: Play | Speed | Loop */
             gap: 15px;
-            align-items: center;
+            align-items: stretch;
         }
 
         .big-play-btn {
             width: 100%;
             padding: 20px;
-            font-size: 1.4rem;
+            font-size: 1.2rem;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -175,6 +200,9 @@
             color: white;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .big-play-btn:active { transform: scale(0.98); }
@@ -182,7 +210,7 @@
 
         .control-group {
             background: var(--surface);
-            padding: 10px 20px;
+            padding: 10px 15px;
             border-radius: 10px;
             display: flex;
             align-items: center;
@@ -190,6 +218,7 @@
             height: 100%;
             color: #94a3b8;
             font-weight: 500;
+            justify-content: center;
         }
 
         .checkbox-wrapper {
@@ -200,19 +229,19 @@
             user-select: none;
             color: white;
         }
-        input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary); }
+        input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--primary); }
 
         select.speed-select {
             background: #334155;
             color: white;
             border: none;
-            padding: 8px;
+            padding: 10px;
             border-radius: 6px;
             font-size: 1rem;
             cursor: pointer;
         }
 
-        /* --- EDITOR & LIBRARY --- */
+        /* --- EDITOR --- */
         .editor-panel {
             max-width: 900px;
             margin: 0 auto;
@@ -226,29 +255,35 @@
             align-items: center;
         }
 
-        .marker-controls { display: flex; gap: 15px; align-items: center; }
+        .marker-controls { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        
+        .marker-item { display: flex; align-items: center; gap: 8px; }
+
         .time-badge {
             font-family: monospace;
             background: rgba(0,0,0,0.3);
-            padding: 5px 10px;
+            padding: 8px 12px;
             border-radius: 4px;
-            min-width: 60px;
+            min-width: 70px;
             text-align: center;
+            font-size: 1rem;
         }
 
         .btn-small {
             background: #475569; border: none; color: white;
-            padding: 8px 12px; border-radius: 4px; cursor: pointer;
+            padding: 10px 15px; border-radius: 4px; cursor: pointer;
+            font-size: 0.9rem;
         }
         .btn-small:hover { background: #64748b; }
 
         .btn-save-loop {
             background: var(--primary); color: white; font-weight: bold;
-            border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;
+            border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer;
+            font-size: 1rem;
         }
 
         /* Saved Loops List */
-        .loop-library { max-width: 900px; margin: 0 auto; width: 100%; }
+        .loop-library { max-width: 900px; margin: 0 auto; width: 100%; padding-bottom: 50px;}
 
         .loop-card {
             background: var(--surface);
@@ -290,18 +325,69 @@
         .loop-name-input {
             background: transparent; border: none; color: white;
             font-size: 1.1rem; width: 100%; margin-bottom: 4px;
+            padding: 5px 0;
         }
-        .loop-name-input:focus { background: rgba(0,0,0,0.2); outline: none; }
         
         .loop-times { font-size: 0.85rem; color: #94a3b8; font-family: monospace; }
         
         .btn-delete-loop {
             background: transparent; border: 1px solid #ef4444; color: #ef4444;
-            padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
+            padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
         }
-        .btn-delete-loop:hover { background: #ef4444; color: white; }
 
         .empty-state { text-align: center; color: #64748b; margin-top: 50px; }
+        
+        /* Overlay for mobile sidebar */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 40;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .overlay.active { display: block; opacity: 1; }
+
+        /* --- MOBILE MEDIA QUERIES --- */
+        @media (max-width: 768px) {
+            .mobile-header-bar { display: flex; }
+
+            .sidebar {
+                position: fixed;
+                top: 0; left: 0;
+                height: 100%;
+                width: 85%; /* Slide out drawer */
+                max-width: 320px;
+                transform: translateX(-100%);
+            }
+            .sidebar.open { transform: translateX(0); }
+
+            .main-content { padding: 15px; }
+
+            .controls-deck {
+                grid-template-columns: 1fr; /* Stack vertically */
+                gap: 10px;
+            }
+            
+            .control-group {
+                justify-content: space-between; /* Spread content in rows */
+            }
+
+            .editor-panel {
+                grid-template-columns: 1fr; /* Stack vertically */
+                gap: 15px;
+            }
+
+            .marker-controls {
+                justify-content: space-between;
+                width: 100%;
+            }
+
+            .btn-save-loop { width: 100%; }
+
+            .song-title { font-size: 1.2rem; }
+            .btn-export { font-size: 0.8rem; padding: 6px 10px; }
+        }
 
     </style>
 </head>
@@ -309,9 +395,14 @@
 
     <input type="file" id="importInput" accept=".json" style="display: none;" onchange="handleFileImport(this)">
 
-    <aside class="sidebar">
+    <div id="overlay" class="overlay" onclick="closeSidebar()"></div>
+
+    <aside id="sidebar" class="sidebar">
         <div class="sidebar-header">
-            <h2>LoopMaster Pro</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>LoopMaster</h2>
+                <button class="btn-sidebar" style="background:transparent; padding:0; font-size:1.5rem;" onclick="closeSidebar()">✕</button>
+            </div>
             <div class="sidebar-actions">
                 <button class="btn-sidebar btn-add" onclick="promptAddSong()">+ New</button>
                 <button class="btn-sidebar btn-import" onclick="triggerImport()">↑ Import</button>
@@ -322,16 +413,20 @@
 
     <main class="main-content">
         
-        <div id="noSongSelected" class="empty-state">
-            <h3>No Song Selected</h3>
-            <p>Select a song from the library or add a new one.</p>
+        <div class="mobile-header-bar">
+            <button class="btn-mobile-menu" onclick="openSidebar()">☰ Library</button>
         </div>
 
-        <div id="playerArea" style="display:none; width: 100%; display: flex; flex-direction: column; gap: 20px;">
+        <div id="noSongSelected" class="empty-state">
+            <h3>No Song Selected</h3>
+            <p>Open the Library to select or add a song.</p>
+        </div>
+
+        <div id="playerArea" style="display:none; width: 100%; display: flex; flex-direction: column; gap: 15px;">
             
             <div class="song-header">
                 <h1 id="currentSongTitle" class="song-title">Song Title</h1>
-                <button class="btn-export" onclick="exportCurrentSong()">↓ Export JSON</button>
+                <button class="btn-export" onclick="exportCurrentSong()">↓ JSON</button>
             </div>
 
             <div class="video-container">
@@ -340,7 +435,7 @@
 
             <div class="controls-deck">
                 <button id="mainPlayBtn" class="big-play-btn" onclick="toggleGlobalPlay()">
-                    ▶ Play Selected Loop
+                    ▶ Play Loop
                 </button>
 
                 <div class="control-group">
@@ -358,19 +453,19 @@
                 <div class="control-group">
                     <label class="checkbox-wrapper">
                         <input type="checkbox" id="loopCheckbox" checked>
-                        <span>Loop</span>
+                        <span>Loop Enabled</span>
                     </label>
                 </div>
             </div>
 
             <div class="editor-panel">
                 <div class="marker-controls">
-                    <div>
+                    <div class="marker-item">
                         <label>Start</label>
                         <div class="time-badge" id="displayStart">0.00</div>
                         <button class="btn-small" onclick="captureStart()">Set</button>
                     </div>
-                    <div>
+                    <div class="marker-item">
                         <label>End</label>
                         <div class="time-badge" id="displayEnd">--</div>
                         <button class="btn-small" onclick="captureEnd()">Set</button>
@@ -384,8 +479,18 @@
     </main>
 
     <script>
-        // --- 1. STATE & STORAGE ---
-        const STORAGE_KEY = 'loopMaster_v6';
+        // --- 1. UI HELPERS (MOBILE) ---
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('overlay').classList.add('active');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('overlay').classList.remove('active');
+        }
+
+        // --- 2. STATE & STORAGE ---
+        const STORAGE_KEY = 'loopMaster_v7';
         let library = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         
         let activeSongId = null;
@@ -395,8 +500,6 @@
         let loopInterval;
         let isPlayingLoop = false;
         let tempStart = 0; let tempEnd = null;
-        
-        // NEW: Speed State
         let currentSpeed = 1.0;
 
         function saveLibrary() {
@@ -404,7 +507,7 @@
             renderSidebar();
         }
 
-        // --- 2. YOUTUBE API ---
+        // --- 3. YOUTUBE API ---
         var tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
         var firstScriptTag = document.getElementsByTagName('script')[0];
@@ -418,46 +521,35 @@
                 playerVars: { 'playsinline': 1, 'rel': 0 },
                 events: { 
                     'onReady': () => { if(activeSongId) loadSong(activeSongId); },
-                    'onStateChange': onPlayerStateChange // SPEED LISTENER
+                    'onStateChange': onPlayerStateChange 
                 }
             });
         }
 
-        // NEW: The Speed Enforcer
         function onPlayerStateChange(event) {
-            // When video starts playing (State == 1)
             if (event.data == YT.PlayerState.PLAYING) {
-                // Wait 200ms to allow YouTube's internal reset to finish, then apply ours
                 setTimeout(() => {
-                    if(player && player.setPlaybackRate) {
-                        player.setPlaybackRate(currentSpeed);
-                    }
+                    if(player && player.setPlaybackRate) player.setPlaybackRate(currentSpeed);
                 }, 200);
             }
         }
 
         function updateSpeed(val) {
             currentSpeed = parseFloat(val);
-            if(player && player.setPlaybackRate) {
-                player.setPlaybackRate(currentSpeed);
-            }
+            if(player && player.setPlaybackRate) player.setPlaybackRate(currentSpeed);
         }
 
-        // --- 3. IMPORT / EXPORT ---
+        // --- 4. IMPORT / EXPORT ---
         function exportCurrentSong() {
             const song = library.find(s => s.id === activeSongId);
             if (!song) return;
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(song, null, 2));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", `${song.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`);
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+            const dlNode = document.createElement('a');
+            dlNode.setAttribute("href", dataStr);
+            dlNode.setAttribute("download", `${song.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`);
+            document.body.appendChild(dlNode); dlNode.click(); dlNode.remove();
         }
-
         function triggerImport() { document.getElementById('importInput').click(); }
-
         function handleFileImport(input) {
             const file = input.files[0];
             if (!file) return;
@@ -465,32 +557,21 @@
             reader.onload = function(e) {
                 try {
                     const importedSong = JSON.parse(e.target.result);
-                    if (!importedSong.videoId || !Array.isArray(importedSong.loops)) {
-                        alert("Invalid file format."); return;
-                    }
-                    const newSongId = Date.now().toString();
-                    const newSong = {
-                        id: newSongId,
-                        title: importedSong.title + " (Imported)",
-                        videoId: importedSong.videoId,
-                        loops: importedSong.loops.map((l, index) => ({
-                            id: newSongId + "_loop_" + index,
-                            name: l.name,
-                            start: l.start,
-                            end: l.end
-                        }))
-                    };
+                    if (!importedSong.videoId || !Array.isArray(importedSong.loops)) { alert("Invalid file."); return; }
+                    const newId = Date.now().toString();
+                    const newSong = { ...importedSong, id: newId, loops: importedSong.loops.map((l,i) => ({...l, id: newId + "_loop_" + i})) };
                     library.push(newSong);
                     saveLibrary();
-                    loadSong(newSong.id);
-                    alert("Song imported successfully!");
-                } catch (err) { alert("Error parsing JSON file."); }
+                    loadSong(newId);
+                    closeSidebar(); // Auto close on mobile
+                    alert("Import successful!");
+                } catch (err) { alert("Error parsing JSON."); }
             };
             reader.readAsText(file);
             input.value = '';
         }
 
-        // --- 4. KEYBOARD SHORTCUTS ---
+        // --- 5. KEYBOARD SHORTCUTS ---
         document.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             if (!activeSongId) return;
@@ -502,18 +583,15 @@
             }
         });
 
-        // --- 5. PLAYBACK LOGIC ---
+        // --- 6. PLAYBACK ---
         function toggleGlobalPlay() {
-            if (!activeLoopId) { alert("Please select a saved loop first."); return; }
-            if (isPlayingLoop) stopPlayback();
-            else startPlayback(activeLoopId);
+            if (!activeLoopId) { alert("Select a loop first."); return; }
+            if (isPlayingLoop) stopPlayback(); else startPlayback(activeLoopId);
         }
-
         function selectAndPlayLoop(loopId) {
             activeLoopId = loopId;
             startPlayback(loopId);
         }
-
         function startPlayback(loopId) {
             const song = library.find(s => s.id === activeSongId);
             const loop = song.loops.find(l => l.id === loopId);
@@ -526,19 +604,15 @@
 
             player.seekTo(loop.start, true);
             player.playVideo();
-            // Speed will be handled by onPlayerStateChange
-
             clearInterval(loopInterval);
             loopInterval = setInterval(() => monitorLoop(loop), 100);
         }
-
         function stopPlayback() {
             isPlayingLoop = false;
             player.pauseVideo();
             clearInterval(loopInterval);
             updateBigButtonState(false);
         }
-
         function monitorLoop(loop) {
             if (!player || typeof player.getCurrentTime !== 'function') return;
             const current = player.getCurrentTime();
@@ -546,43 +620,28 @@
             if (current >= loop.end) {
                 if (shouldLoop) {
                     player.seekTo(loop.start, true);
-                    // Force speed again immediately after seek command to be safe
                     player.setPlaybackRate(currentSpeed);
-                } else {
-                    stopPlayback();
-                }
+                } else stopPlayback();
             }
         }
-
         function updateBigButtonState(playing) {
             const btn = document.getElementById('mainPlayBtn');
-            if (playing) {
-                btn.innerText = "■ STOP";
-                btn.classList.add('stop-mode');
-            } else {
-                btn.innerText = "▶ PLAY SELECTED LOOP";
-                btn.classList.remove('stop-mode');
-            }
+            if (playing) { btn.innerText = "■ STOP"; btn.classList.add('stop-mode'); }
+            else { btn.innerText = "▶ PLAY LOOP"; btn.classList.remove('stop-mode'); }
         }
 
-        // --- 6. CRUD ---
+        // --- 7. CRUD ---
         function promptAddSong() {
             const url = prompt("Paste YouTube URL:");
             if (!url) return;
             const videoId = extractVideoID(url);
             if (!videoId) { alert("Invalid URL"); return; }
-            
-            const newSong = {
-                id: Date.now().toString(),
-                title: prompt("Name this song:", "New Song") || "Untitled",
-                videoId: videoId,
-                loops: []
-            };
+            const newSong = { id: Date.now().toString(), title: prompt("Name:", "New Song") || "Untitled", videoId: videoId, loops: [] };
             library.push(newSong);
             saveLibrary();
             loadSong(newSong.id);
+            closeSidebar(); // Auto close on mobile
         }
-
         function deleteSong(e, id) {
             e.stopPropagation();
             if(!confirm("Delete this song?")) return;
@@ -595,40 +654,29 @@
             }
             saveLibrary();
         }
-
         function loadSong(id) {
             activeSongId = id;
             const song = library.find(s => s.id === id);
             if (!song) return;
             renderSidebar();
-            
             document.getElementById('noSongSelected').style.display = 'none';
             document.getElementById('playerArea').style.display = 'flex';
             document.getElementById('currentSongTitle').innerText = song.title;
-
             if (player && typeof player.loadVideoById === 'function') player.loadVideoById(song.videoId);
-            
             stopPlayback();
-            activeLoopId = null;
-            tempStart = 0; tempEnd = null;
+            activeLoopId = null; tempStart = 0; tempEnd = null;
             updateEditorDisplay();
             renderLoops(song);
+            closeSidebar(); // UX: Close sidebar when a song is selected on mobile
         }
-
         function saveCurrentLoop() {
-            if (tempEnd === null || tempStart >= tempEnd) { alert("Please set valid Start and End times."); return; }
+            if (tempEnd === null || tempStart >= tempEnd) { alert("Set Start/End first."); return; }
             const song = library.find(s => s.id === activeSongId);
-            song.loops.push({
-                id: Date.now().toString() + "_loop",
-                name: `Loop ${song.loops.length + 1}`,
-                start: tempStart,
-                end: tempEnd
-            });
+            song.loops.push({ id: Date.now().toString() + "_loop", name: `Loop ${song.loops.length + 1}`, start: tempStart, end: tempEnd });
             saveLibrary();
             renderLoops(song);
             tempEnd = null; updateEditorDisplay();
         }
-
         function deleteLoop(e, loopId) {
             e.stopPropagation();
             const song = library.find(s => s.id === activeSongId);
@@ -637,13 +685,11 @@
             saveLibrary();
             renderLoops(song);
         }
-
         function updateLoopName(loopId, newName) {
             const song = library.find(s => s.id === activeSongId);
             const loop = song.loops.find(l => l.id === loopId);
             if(loop) { loop.name = newName; saveLibrary(); }
         }
-
         function captureStart() { if (!player) return; tempStart = player.getCurrentTime(); updateEditorDisplay(); }
         function captureEnd() { if (!player) return; tempEnd = player.getCurrentTime(); updateEditorDisplay(); }
         function updateEditorDisplay() {
@@ -655,7 +701,7 @@
             return (match && match[2].length === 11) ? match[2] : null;
         }
 
-        // --- 7. RENDER ---
+        // --- 8. RENDER ---
         function renderSidebar() {
             const list = document.getElementById('songListElement');
             list.innerHTML = '';
@@ -667,30 +713,20 @@
                 list.appendChild(li);
             });
         }
-
         function renderLoops(song) {
             const container = document.getElementById('loopListContainer');
             container.innerHTML = '';
-            if (song.loops.length === 0) {
-                container.innerHTML = '<div style="color:#64748b; text-align:center;">No loops saved yet.</div>';
-                return;
-            }
+            if (song.loops.length === 0) { container.innerHTML = '<div style="color:#64748b; text-align:center;">No loops yet.</div>'; return; }
             song.loops.forEach((loop, index) => {
                 const isSelected = (loop.id === activeLoopId);
                 const div = document.createElement('div');
                 div.className = `loop-card ${isSelected ? 'selected' : ''}`;
                 div.onclick = () => selectAndPlayLoop(loop.id);
-
-                const shortcutHTML = index < 9 
-                    ? `<span class="shortcut-badge">${index + 1}</span>` 
-                    : `<span class="shortcut-badge" style="opacity:0"></span>`;
-
+                const shortcutHTML = index < 9 ? `<span class="shortcut-badge">${index + 1}</span>` : `<span class="shortcut-badge" style="opacity:0"></span>`;
                 div.innerHTML = `
                     ${shortcutHTML}
                     <div class="loop-info">
-                        <input class="loop-name-input" value="${loop.name}" 
-                               onclick="event.stopPropagation()" 
-                               onblur="updateLoopName('${loop.id}', this.value)">
+                        <input class="loop-name-input" value="${loop.name}" onclick="event.stopPropagation()" onblur="updateLoopName('${loop.id}', this.value)">
                         <div class="loop-times">${loop.start.toFixed(2)}s — ${loop.end.toFixed(2)}s</div>
                     </div>
                     <button class="btn-delete-loop" onclick="deleteLoop(event, '${loop.id}')">Delete</button>
