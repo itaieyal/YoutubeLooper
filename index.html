@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>LoopMaster Pro v10</title>
     <style>
         :root {
@@ -93,6 +94,29 @@
         }
         .song-item:hover { background: var(--surface-hover); }
         .song-item.active { background: var(--primary); color: white; }
+        .song-item.sample {
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+        }
+        .song-item.sample.active {
+            background: linear-gradient(135deg, #f59e0b, #6366f1);
+            border-color: transparent;
+        }
+        .song-title-wrap {
+            display: flex; align-items: center; gap: 8px; min-width: 0;
+        }
+        .song-title-wrap span:first-child {
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .sample-badge {
+            color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.55);
+            border-radius: 999px; padding: 2px 7px; font-size: 0.68rem;
+            font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+            flex-shrink: 0;
+        }
+        .song-item.sample.active .sample-badge {
+            color: white; border-color: rgba(255,255,255,0.6);
+        }
 
         .btn-delete-song {
             background: transparent; border: none; color: rgba(255,255,255,0.4);
@@ -166,14 +190,24 @@
             gap: 15px; align-items: stretch;
         }
 
+        .play-action-group {
+            display: grid; grid-template-columns: 1fr; gap: 10px;
+        }
+
+        .play-action-group.loop-ended {
+            grid-template-columns: 1fr 1fr;
+        }
+
         .big-play-btn {
             width: 100%; padding: 20px; font-size: 1.2rem; font-weight: bold;
-            text-transform: uppercase; letter-spacing: 1px; border: none;
+            border: none;
             border-radius: 10px; cursor: pointer; background-color: var(--accent);
             color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             display: flex; align-items: center; justify-content: center;
         }
         .big-play-btn.stop-mode { background-color: var(--danger); }
+        .big-play-btn.continue-mode { background-color: var(--primary); }
+        .big-play-btn.hidden { display: none; }
 
         .control-group {
             background: var(--surface); padding: 10px 15px; border-radius: 10px;
@@ -216,11 +250,60 @@
             border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 1rem;
         }
 
+        .loop-diagram {
+            max-width: 900px; margin: 0 auto; width: 100%;
+            background: rgba(30, 41, 59, 0.72);
+            border: 1px solid #334155; border-radius: 8px;
+            padding: 12px 14px 14px;
+        }
+
+        .loop-diagram-header {
+            display: flex; justify-content: space-between; align-items: center;
+            color: #94a3b8; font-size: 0.78rem; margin-bottom: 10px;
+        }
+
+        .loop-diagram-title {
+            color: #cbd5e1; font-weight: 700;
+        }
+
+        .loop-track {
+            position: relative; height: 32px; border-radius: 999px;
+            background: linear-gradient(90deg, #1e293b, #334155);
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+            overflow: visible;
+        }
+
+        .loop-segment {
+            position: absolute; top: 8px; height: 16px; min-width: 6px;
+            border-radius: 999px; cursor: pointer;
+            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.65), 0 6px 16px rgba(0,0,0,0.25);
+            transition: transform 0.15s ease, filter 0.15s ease;
+        }
+
+        .loop-segment:hover,
+        .loop-segment.selected {
+            transform: translateY(-2px) scaleY(1.25);
+            filter: brightness(1.18);
+            z-index: 2;
+        }
+
+        .loop-segment::after {
+            content: attr(data-name);
+            position: absolute; left: 50%; bottom: calc(100% + 8px);
+            transform: translateX(-50%);
+            background: #020617; color: white; border: 1px solid #334155;
+            border-radius: 6px; padding: 5px 8px; font-size: 0.75rem;
+            white-space: nowrap; opacity: 0; pointer-events: none;
+            transition: opacity 0.15s ease;
+        }
+
+        .loop-segment:hover::after { opacity: 1; }
+
         .loop-library { max-width: 900px; margin: 0 auto; width: 100%; padding-bottom: 50px;}
 
         .loop-card {
             background: var(--surface); margin-bottom: 10px; padding: 15px;
-            border-radius: 8px; display: flex; align-items: center; gap: 15px;
+            border-radius: 8px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 15px;
             border: 2px solid transparent; cursor: pointer; position: relative;
         }
         .loop-card.selected {
@@ -241,9 +324,77 @@
         }
         .loop-times { font-size: 0.85rem; color: #94a3b8; font-family: monospace; }
         
+        .loop-actions {
+            display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+        }
+
+        .btn-fine-tune {
+            background: transparent; border: 1px solid #38bdf8; color: #7dd3fc;
+            padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
+        }
+
+        .btn-loop-end {
+            background: transparent; border: 1px solid var(--warning); color: var(--warning);
+            padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
+        }
+
         .btn-delete-loop {
             background: transparent; border: 1px solid #ef4444; color: #ef4444;
             padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
+        }
+
+        .fine-tune-panel {
+            grid-column: 2 / 4;
+            display: grid; grid-template-columns: minmax(100px, auto) 1fr 1fr auto; gap: 12px;
+            align-items: end; padding-top: 12px; border-top: 1px solid #334155;
+            cursor: default;
+        }
+
+        .fine-tune-step {
+            display: grid; gap: 6px; color: #94a3b8; font-size: 0.85rem; font-weight: 600;
+        }
+
+        .fine-tune-step input {
+            width: 100%; height: 32px; background: #0f172a; color: white; border: 1px solid #334155;
+            border-radius: 6px; padding: 6px 8px; font-size: 0.9rem;
+        }
+
+        .fine-tune-point {
+            display: grid; gap: 6px;
+            color: #cbd5e1; font-size: 0.85rem;
+        }
+
+        .fine-tune-label {
+            color: #94a3b8; font-weight: 600;
+        }
+
+        .fine-tune-control {
+            display: grid; grid-template-columns: 32px minmax(78px, 1fr) 32px;
+            align-items: center; gap: 8px;
+        }
+
+        .fine-tune-time {
+            font-family: monospace; color: white; background: rgba(0,0,0,0.25);
+            border-radius: 4px; padding: 6px 8px; text-align: center;
+        }
+
+        .fine-tune-nudge {
+            width: 32px; height: 32px; border-radius: 6px; border: 1px solid #475569;
+            background: #334155; color: white; font-weight: 800; cursor: pointer;
+        }
+
+        .fine-tune-actions {
+            display: flex; gap: 8px; justify-content: flex-end; align-items: center; height: 32px;
+        }
+
+        .btn-fine-save {
+            background: var(--accent); color: white; border: none;
+            height: 32px; padding: 0 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
+        }
+
+        .btn-fine-cancel {
+            background: transparent; color: #cbd5e1; border: 1px solid #475569;
+            height: 32px; padding: 0 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
         }
 
         .empty-state { text-align: center; color: #64748b; margin-top: 50px; }
@@ -281,10 +432,16 @@
             .sidebar.open { transform: translateX(0); }
             .main-content { padding: 15px; }
             .controls-deck { grid-template-columns: 1fr; gap: 10px; }
+            .play-action-group.loop-ended { grid-template-columns: 1fr; }
             .control-group { justify-content: space-between; }
             .editor-panel { grid-template-columns: 1fr; gap: 15px; }
             .marker-controls { justify-content: space-between; width: 100%; }
             .btn-save-loop { width: 100%; }
+            .loop-card { grid-template-columns: auto 1fr; }
+            .loop-actions { grid-column: 2; flex-wrap: wrap; }
+            .fine-tune-panel { grid-column: 1 / 3; grid-template-columns: 1fr; }
+            .fine-tune-actions { justify-content: stretch; }
+            .fine-tune-actions button { flex: 1; }
         }
     </style>
 </head>
@@ -341,7 +498,11 @@
             </div>
 
             <div class="controls-deck">
-                <button id="mainPlayBtn" class="big-play-btn" onclick="toggleGlobalPlay()">▶ Play Loop</button>
+                <div id="playActionGroup" class="play-action-group">
+                    <button id="mainPlayBtn" class="big-play-btn" onclick="toggleGlobalPlay()">Play</button>
+                    <button id="replayLoopBtn" class="big-play-btn hidden" onclick="replayEndedLoop()">Replay loop</button>
+                    <button id="continuePlayingBtn" class="big-play-btn continue-mode hidden" onclick="continuePlayingPastLoop()">Continue playing</button>
+                </div>
                 <div class="control-group">
                     <label>Speed</label>
                     <select id="speedSelect" class="speed-select" onchange="updateSpeed(this.value)">
@@ -377,6 +538,7 @@
                 <button class="btn-save-loop" onclick="saveCurrentLoop()">+ Save Loop</button>
             </div>
 
+            <div class="loop-diagram" id="loopDiagram"></div>
             <div class="loop-library" id="loopListContainer"></div>
         </div>
     </main>
@@ -410,17 +572,46 @@
 
         // --- 2. STATE ---
         const STORAGE_KEY = 'loopMaster_v10';
+        const EXAMPLE_SONG_ID = 'example-dQw4w9WgXcQ';
+        const EXAMPLE_SONG = {
+            id: EXAMPLE_SONG_ID,
+            title: 'Sample: Never Gonna Give You Up',
+            videoId: 'dQw4w9WgXcQ',
+            isSample: true,
+            loops: [
+                { id: `${EXAMPLE_SONG_ID}_intro`, name: 'Intro', start: 0, end: 18.6 },
+                { id: `${EXAMPLE_SONG_ID}_verse_1`, name: 'Verse 1', start: 18.6, end: 43.4 },
+                { id: `${EXAMPLE_SONG_ID}_pre_chorus_1`, name: 'Pre-chorus 1', start: 43.4, end: 58.1 },
+                { id: `${EXAMPLE_SONG_ID}_chorus_1`, name: 'Chorus 1', start: 58.1, end: 75.4 },
+                { id: `${EXAMPLE_SONG_ID}_verse_2`, name: 'Verse 2', start: 75.4, end: 100.2 },
+                { id: `${EXAMPLE_SONG_ID}_pre_chorus_2`, name: 'Pre-chorus 2', start: 100.2, end: 114.8 },
+                { id: `${EXAMPLE_SONG_ID}_chorus_2`, name: 'Chorus 2', start: 114.8, end: 132.4 },
+                { id: `${EXAMPLE_SONG_ID}_bridge`, name: 'Bridge', start: 132.4, end: 156.6 },
+                { id: `${EXAMPLE_SONG_ID}_final_chorus`, name: 'Final chorus', start: 156.6, end: 199.0 }
+            ]
+        };
         let library = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let activeSongId = null;
         let activeLoopId = null; 
         let player; 
         let loopInterval;
         let isPlayingLoop = false;
+        let endedLoopId = null;
+        let fineTuneState = null;
         let tempStart = 0; 
         let tempEnd = null;
         let currentSpeed = 1.0;
 
         function saveLibrary() { localStorage.setItem(STORAGE_KEY, JSON.stringify(library)); renderSidebar(); }
+        function syncExampleSong() {
+            library = library.filter(song => song.id !== EXAMPLE_SONG_ID);
+            library.unshift(JSON.parse(JSON.stringify(EXAMPLE_SONG)));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
+        }
+        function initializeLibrary() {
+            syncExampleSong();
+            loadSong(library[0].id);
+        }
 
         // --- 3. YOUTUBE API (MOBILE FIX) ---
         var tag = document.createElement('script');
@@ -429,12 +620,19 @@
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
         function onYouTubeIframeAPIReady() {
+            const playerVars = { 'playsinline': 1, 'rel': 0 };
+            if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+                playerVars.origin = window.location.origin;
+                playerVars.widget_referrer = window.location.href;
+            }
+
             player = new YT.Player('yt-player', {
                 height: '100%', width: '100%', videoId: '', 
-                playerVars: { 'playsinline': 1, 'rel': 0, 'origin': window.location.origin },
+                playerVars,
                 events: { 
                     'onReady': () => { if(activeSongId) loadSong(activeSongId); },
-                    'onStateChange': onPlayerStateChange 
+                    'onStateChange': onPlayerStateChange,
+                    'onError': onPlayerError
                 }
             });
         }
@@ -447,6 +645,11 @@
         function updateSpeed(val) {
             currentSpeed = parseFloat(val);
             if(player && player.setPlaybackRate) player.setPlaybackRate(currentSpeed);
+        }
+        function onPlayerError(event) {
+            if (event.data === 153) {
+                alert("YouTube blocked this embed because it did not receive a valid referrer. Run this app from http://localhost instead of opening index.html directly.");
+            }
         }
 
         // --- 4. DATA ---
@@ -479,52 +682,84 @@
 
         // --- 5. LOGIC ---
         function toggleGlobalPlay() {
-            if (!activeLoopId) { alert("Select a loop first."); return; }
-            if (isPlayingLoop) stopPlayback(); else startPlayback(activeLoopId);
+            if (isPlayingLoop) stopPlayback(null, true); else startPlayback(activeLoopId);
         }
-        function selectAndPlayLoop(loopId) { activeLoopId = loopId; startPlayback(loopId); }
-        function startPlayback(loopId) {
+        function selectAndPlayLoop(loopId) { activeLoopId = loopId; startPlayback(loopId, true); }
+        function startPlayback(loopId, restartFromLoopStart = false) {
             const song = library.find(s => s.id === activeSongId);
-            const loop = song.loops.find(l => l.id === loopId);
-            if (!loop) return;
+            const loop = song && song.loops.find(l => l.id === loopId);
 
+            endedLoopId = null;
             isPlayingLoop = true; activeLoopId = loopId; 
-            updateBigButtonState(true); renderLoops(song); 
+            updateBigButtonState(true);
+            if (song) renderLoops(song);
 
-            player.seekTo(loop.start, true); player.playVideo();
+            if (restartFromLoopStart && loop) player.seekTo(loop.start, true);
+            player.playVideo();
             clearInterval(loopInterval);
-            loopInterval = setInterval(() => monitorLoop(loop), 100);
+            if (loop) loopInterval = setInterval(() => monitorLoop(loop), 100);
         }
-        function stopPlayback() {
+        function stopPlayback(endedLoop = null, manualStop = false) {
             isPlayingLoop = false;
+            endedLoopId = endedLoop && !manualStop ? endedLoop.id : null;
+            clearInterval(loopInterval);
             
             // FIX: Check if pauseVideo exists before calling it
             if (player && typeof player.pauseVideo === 'function') {
                 player.pauseVideo();
             }
             
-            clearInterval(loopInterval);
-            updateBigButtonState(false);
+            if (endedLoop && !manualStop) updateLoopEndButtonState();
+            else updateBigButtonState(false);
         }
         function monitorLoop(loop) {
             if (!player || typeof player.getCurrentTime !== 'function') return;
+            if (!isPlayingLoop) return;
             const current = player.getCurrentTime();
             const shouldLoop = document.getElementById('loopCheckbox').checked;
             if (current >= loop.end) {
                 if (shouldLoop) {
                     player.seekTo(loop.start, true);
                     player.setPlaybackRate(currentSpeed);
-                } else stopPlayback();
+                } else stopPlayback(loop);
             }
         }
         function updateBigButtonState(playing) {
+            const group = document.getElementById('playActionGroup');
             const btn = document.getElementById('mainPlayBtn');
-            if (playing) { btn.innerText = "■ STOP"; btn.classList.add('stop-mode'); }
-            else { btn.innerText = "▶ PLAY LOOP"; btn.classList.remove('stop-mode'); }
+            const replayBtn = document.getElementById('replayLoopBtn');
+            const continueBtn = document.getElementById('continuePlayingBtn');
+            group.classList.remove('loop-ended');
+            btn.classList.remove('hidden');
+            replayBtn.classList.add('hidden');
+            continueBtn.classList.add('hidden');
+            if (playing) { btn.innerText = "Stop"; btn.classList.add('stop-mode'); }
+            else { btn.innerText = "Play"; btn.classList.remove('stop-mode'); }
+        }
+        function updateLoopEndButtonState() {
+            const group = document.getElementById('playActionGroup');
+            document.getElementById('mainPlayBtn').classList.add('hidden');
+            document.getElementById('replayLoopBtn').classList.remove('hidden');
+            document.getElementById('continuePlayingBtn').classList.remove('hidden');
+            group.classList.add('loop-ended');
+        }
+        function replayEndedLoop() {
+            if (!endedLoopId) return;
+            startPlayback(endedLoopId, true);
+        }
+        function continuePlayingPastLoop() {
+            endedLoopId = null;
+            isPlayingLoop = true;
+            clearInterval(loopInterval);
+            updateBigButtonState(true);
+            if (player && typeof player.playVideo === 'function') {
+                player.playVideo();
+            }
         }
 
         function deleteSong(e, id) {
             e.stopPropagation();
+            if (id === EXAMPLE_SONG_ID) return;
             if(!confirm("Delete this song?")) return;
             library = library.filter(s => s.id !== id);
             if (activeSongId === id) {
@@ -538,22 +773,27 @@
 
         function loadSong(id) {
             activeSongId = id;
+            fineTuneState = null;
             const song = library.find(s => s.id === id);
             if (!song) return;
             renderSidebar();
             document.getElementById('noSongSelected').style.display = 'none';
             document.getElementById('playerArea').style.display = 'flex';
             document.getElementById('currentSongTitle').innerText = song.title;
+            stopPlayback();
             
-            // KEY MOBILE FIX: Use cueVideoById instead of loadVideoById
-            if (player && typeof player.cueVideoById === 'function') {
-                player.cueVideoById(song.videoId);
+            if (player && typeof player.loadVideoById === 'function') {
+                player.loadVideoById(song.videoId);
+                if (typeof player.pauseVideo === 'function') {
+                    setTimeout(() => player.pauseVideo(), 200);
+                }
             }
             
-            stopPlayback();
-            activeLoopId = null; tempStart = 0; tempEnd = null;
+            activeLoopId = song.loops[0] ? song.loops[0].id : null;
+            tempStart = 0; tempEnd = null;
             updateEditorDisplay();
             renderLoops(song);
+            setTimeout(() => renderLoops(song), 800);
         }
 
         function saveCurrentLoop() {
@@ -570,13 +810,79 @@
             const song = library.find(s => s.id === activeSongId);
             song.loops = song.loops.filter(l => l.id !== loopId);
             if(activeLoopId === loopId) stopPlayback();
+            if(fineTuneState && fineTuneState.loopId === loopId) fineTuneState = null;
             saveLibrary();
+            renderLoops(song);
+        }
+        function goToLoopEnd(e, loopId) {
+            e.stopPropagation();
+            const song = library.find(s => s.id === activeSongId);
+            const loop = song && song.loops.find(l => l.id === loopId);
+            if (!loop || !player || typeof player.seekTo !== 'function') return;
+
+            activeLoopId = loopId;
+            player.seekTo(loop.end, true);
+            stopPlayback(loop);
             renderLoops(song);
         }
         function updateLoopName(loopId, newName) {
             const song = library.find(s => s.id === activeSongId);
             const loop = song.loops.find(l => l.id === loopId);
             if(loop) { loop.name = newName; saveLibrary(); }
+        }
+        function startFineTune(e, loopId) {
+            e.stopPropagation();
+            const song = library.find(s => s.id === activeSongId);
+            const loop = song && song.loops.find(l => l.id === loopId);
+            if (!loop) return;
+
+            activeLoopId = loopId;
+            fineTuneState = { loopId, start: loop.start, end: loop.end, step: 0.1 };
+            if (player && typeof player.seekTo === 'function') player.seekTo(loop.start, true);
+            renderLoops(song);
+        }
+        function updateFineTuneStep(value) {
+            if (!fineTuneState) return;
+            const parsed = parseFloat(value);
+            fineTuneState.step = Math.max(0.1, Math.round((Number.isFinite(parsed) ? parsed : 0.1) * 10) / 10);
+        }
+        function nudgeFineTune(e, point, direction) {
+            e.stopPropagation();
+            if (!fineTuneState) return;
+            const song = library.find(s => s.id === activeSongId);
+            if (!song) return;
+
+            const step = fineTuneState.step || 0.1;
+            if (point === 'start') {
+                fineTuneState.start = Math.max(0, Math.min(fineTuneState.end - 0.1, fineTuneState.start + (direction * step)));
+                if (player && typeof player.seekTo === 'function') player.seekTo(fineTuneState.start, true);
+            } else {
+                fineTuneState.end = Math.max(fineTuneState.start + 0.1, fineTuneState.end + (direction * step));
+                if (player && typeof player.seekTo === 'function') player.seekTo(fineTuneState.end, true);
+            }
+
+            fineTuneState.start = Math.round(fineTuneState.start * 10) / 10;
+            fineTuneState.end = Math.round(fineTuneState.end * 10) / 10;
+            renderLoops(song);
+        }
+        function saveFineTune(e) {
+            e.stopPropagation();
+            if (!fineTuneState) return;
+            const song = library.find(s => s.id === activeSongId);
+            const loop = song && song.loops.find(l => l.id === fineTuneState.loopId);
+            if (!loop) return;
+
+            loop.start = fineTuneState.start;
+            loop.end = fineTuneState.end;
+            fineTuneState = null;
+            saveLibrary();
+            renderLoops(song);
+        }
+        function cancelFineTune(e) {
+            e.stopPropagation();
+            const song = library.find(s => s.id === activeSongId);
+            fineTuneState = null;
+            if (song) renderLoops(song);
         }
         function captureStart() { if (!player) return; tempStart = player.getCurrentTime(); updateEditorDisplay(); }
         function captureEnd() { if (!player) return; tempEnd = player.getCurrentTime(); updateEditorDisplay(); }
@@ -585,42 +891,158 @@
             document.getElementById('displayEnd').innerText = tempEnd ? tempEnd.toFixed(2) : "--";
         }
         function extractVideoID(url) {
-            const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
-            return (match && match[2].length === 11) ? match[2] : null;
+            const validVideoId = (value) => value && value.length === 11 ? value : null;
+
+            try {
+                const parsed = new URL(url);
+                const host = parsed.hostname.replace(/^www\./, '');
+                const pathParts = parsed.pathname.split('/').filter(Boolean);
+
+                if (host === 'youtu.be') return validVideoId(pathParts[0]);
+                if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+                    if (parsed.searchParams.has('v')) return validVideoId(parsed.searchParams.get('v'));
+                    if (['embed', 'shorts', 'live', 'v'].includes(pathParts[0])) return validVideoId(pathParts[1]);
+                }
+            } catch (err) {
+                const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/|live\/)([^#&?]*).*/);
+                return match ? validVideoId(match[2]) : null;
+            }
+
+            return null;
         }
 
         // --- RENDER ---
+        function getLoopDiagramDuration(song) {
+            const playerDuration = player && typeof player.getDuration === 'function' ? player.getDuration() : 0;
+            const latestLoopEnd = song.loops.reduce((latest, loop) => Math.max(latest, loop.end), 0);
+            return Math.max(playerDuration || 0, latestLoopEnd, 1);
+        }
+
+        function loopColor(index) {
+            const colors = ['#38bdf8', '#a78bfa', '#34d399', '#f59e0b', '#fb7185', '#22d3ee', '#c084fc', '#84cc16'];
+            return colors[index % colors.length];
+        }
+
+        function escapeAttribute(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
         function renderSidebar() {
             const list = document.getElementById('songListElement');
             list.innerHTML = '';
             library.forEach(song => {
                 const li = document.createElement('li');
-                li.className = `song-item ${song.id === activeSongId ? 'active' : ''}`;
+                const isSample = song.id === EXAMPLE_SONG_ID || song.isSample;
+                li.className = `song-item ${isSample ? 'sample' : ''} ${song.id === activeSongId ? 'active' : ''}`;
                 li.onclick = () => loadSong(song.id);
-                li.innerHTML = `<span>${song.title}</span><button class="btn-delete-song" onclick="deleteSong(event, '${song.id}')">✕</button>`;
+                li.innerHTML = `
+                    <span class="song-title-wrap">
+                        <span>${song.title}</span>
+                        ${isSample ? '<span class="sample-badge">Sample</span>' : ''}
+                    </span>
+                    ${isSample ? '' : `<button class="btn-delete-song" onclick="deleteSong(event, '${song.id}')">✕</button>`}
+                `;
                 list.appendChild(li);
             });
         }
         function renderLoops(song) {
+            renderLoopDiagram(song);
+
             const container = document.getElementById('loopListContainer');
             container.innerHTML = '';
             if (song.loops.length === 0) { container.innerHTML = '<div style="color:#64748b; text-align:center;">No loops yet.</div>'; return; }
             song.loops.forEach((loop, index) => {
                 const isSelected = (loop.id === activeLoopId);
+                const isFineTuning = fineTuneState && fineTuneState.loopId === loop.id;
+                const displayStart = isFineTuning ? fineTuneState.start : loop.start;
+                const displayEnd = isFineTuning ? fineTuneState.end : loop.end;
                 const div = document.createElement('div');
                 div.className = `loop-card ${isSelected ? 'selected' : ''}`;
                 div.onclick = () => selectAndPlayLoop(loop.id);
                 const shortcutHTML = index < 9 ? `<span class="shortcut-badge">${index + 1}</span>` : `<span class="shortcut-badge" style="opacity:0"></span>`;
+                const fineTuneHTML = isFineTuning ? `
+                    <div class="fine-tune-panel" onclick="event.stopPropagation()">
+                        <label class="fine-tune-step">
+                            <span>Step</span>
+                            <input type="number" min="0.1" step="0.1" value="${fineTuneState.step.toFixed(1)}" onchange="updateFineTuneStep(this.value)">
+                        </label>
+                        <div class="fine-tune-point">
+                            <span class="fine-tune-label">Start</span>
+                            <div class="fine-tune-control">
+                                <button class="fine-tune-nudge" onclick="nudgeFineTune(event, 'start', -1)">-</button>
+                                <span class="fine-tune-time">${displayStart.toFixed(1)}s</span>
+                                <button class="fine-tune-nudge" onclick="nudgeFineTune(event, 'start', 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="fine-tune-point">
+                            <span class="fine-tune-label">End</span>
+                            <div class="fine-tune-control">
+                                <button class="fine-tune-nudge" onclick="nudgeFineTune(event, 'end', -1)">-</button>
+                                <span class="fine-tune-time">${displayEnd.toFixed(1)}s</span>
+                                <button class="fine-tune-nudge" onclick="nudgeFineTune(event, 'end', 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="fine-tune-actions">
+                            <button class="btn-fine-save" onclick="saveFineTune(event)">Save</button>
+                            <button class="btn-fine-cancel" onclick="cancelFineTune(event)">Cancel</button>
+                        </div>
+                    </div>
+                ` : '';
                 div.innerHTML = `
                     ${shortcutHTML}
                     <div class="loop-info">
                         <input class="loop-name-input" value="${loop.name}" onclick="event.stopPropagation()" onblur="updateLoopName('${loop.id}', this.value)">
-                        <div class="loop-times">${loop.start.toFixed(2)}s — ${loop.end.toFixed(2)}s</div>
+                        <div class="loop-times">${displayStart.toFixed(2)}s — ${displayEnd.toFixed(2)}s</div>
                     </div>
-                    <button class="btn-delete-loop" onclick="deleteLoop(event, '${loop.id}')">Delete</button>
+                    <div class="loop-actions">
+                        <button class="btn-fine-tune" onclick="startFineTune(event, '${loop.id}')">Fine tune</button>
+                        <button class="btn-loop-end" onclick="goToLoopEnd(event, '${loop.id}')">Go to end of loop</button>
+                        <button class="btn-delete-loop" onclick="deleteLoop(event, '${loop.id}')">Delete</button>
+                    </div>
+                    ${fineTuneHTML}
                 `;
                 container.appendChild(div);
             });
+        }
+        function renderLoopDiagram(song) {
+            const diagram = document.getElementById('loopDiagram');
+            if (!diagram) return;
+
+            if (song.loops.length === 0) {
+                diagram.innerHTML = `
+                    <div class="loop-diagram-header">
+                        <span class="loop-diagram-title">Loop map</span>
+                        <span>No loops yet</span>
+                    </div>
+                    <div class="loop-track"></div>
+                `;
+                return;
+            }
+
+            const duration = getLoopDiagramDuration(song);
+            const segments = song.loops.map((loop, index) => {
+                const isFineTuning = fineTuneState && fineTuneState.loopId === loop.id;
+                const start = isFineTuning ? fineTuneState.start : loop.start;
+                const end = isFineTuning ? fineTuneState.end : loop.end;
+                const left = Math.max(0, Math.min(100, (start / duration) * 100));
+                const right = Math.max(left, Math.min(100, (end / duration) * 100));
+                const width = Math.max(0.75, right - left);
+                const selected = loop.id === activeLoopId ? ' selected' : '';
+
+                return `<button class="loop-segment${selected}" style="left:${left}%; width:${width}%; background:${loopColor(index)};" data-name="${escapeAttribute(loop.name)}" title="${escapeAttribute(loop.name)}" onclick="selectAndPlayLoop('${loop.id}')"></button>`;
+            }).join('');
+
+            diagram.innerHTML = `
+                <div class="loop-diagram-header">
+                    <span class="loop-diagram-title">Loop map</span>
+                    <span>${song.loops.length} loop${song.loops.length === 1 ? '' : 's'}</span>
+                </div>
+                <div class="loop-track">${segments}</div>
+            `;
         }
         
         document.addEventListener('keydown', (e) => {
@@ -634,7 +1056,7 @@
             }
         });
         
-        if(library.length > 0) renderSidebar();
+        initializeLibrary();
     </script>
 </body>
 </html>
